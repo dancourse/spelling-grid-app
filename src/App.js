@@ -15,6 +15,9 @@ const SpellingGridGenerator = () => {
   const audioChunksRef = useRef([]);
   const fileInputRef = useRef(null);
 
+  // OpenRouter API key
+  const OPENROUTER_API_KEY = "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";
+
   // Check for shared words in URL on load
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -26,7 +29,7 @@ const SpellingGridGenerator = () => {
           setWords(wordList.slice(0, 12));
           setTextInput(wordList.join('\n'));
           setShowTextInput(false);
-          showStatus('✅ Spelling grid loaded from shared link!');
+          showStatus('Spelling grid loaded from shared link!');
         }
       } catch (error) {
         showStatus('Error loading shared grid. Please try again.', true);
@@ -34,10 +37,7 @@ const SpellingGridGenerator = () => {
     }
   }, []);
 
-  // OpenRouter API key
-  const OPENROUTER_API_KEY = "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";
-
-  const showStatus = (message: string, isError = false) => {
+  const showStatus = (message, isError = false) => {
     setStatusMessage(message);
     setTimeout(() => setStatusMessage(''), isError ? 5000 : 3000);
   };
@@ -53,13 +53,13 @@ const SpellingGridGenerator = () => {
     setShowTextInput(false);
   };
 
-  const updateWord = (index: number, newWord: string) => {
+  const updateWord = (index, newWord) => {
     const newWords = [...words];
     newWords[index] = newWord;
     setWords(newWords);
   };
 
-  const deleteWord = (index: number) => {
+  const deleteWord = (index) => {
     if (words.length > 1) {
       const newWords = words.filter((_, i) => i !== index);
       setWords(newWords);
@@ -72,8 +72,7 @@ const SpellingGridGenerator = () => {
     }
   };
 
-  // Simple arrow-based reordering for mobile
-  const moveWordUp = (index: number) => {
+  const moveWordUp = (index) => {
     if (index > 0) {
       const newWords = [...words];
       [newWords[index], newWords[index - 1]] = [newWords[index - 1], newWords[index]];
@@ -81,7 +80,7 @@ const SpellingGridGenerator = () => {
     }
   };
 
-  const moveWordDown = (index: number) => {
+  const moveWordDown = (index) => {
     if (index < words.length - 1) {
       const newWords = [...words];
       [newWords[index], newWords[index + 1]] = [newWords[index + 1], newWords[index]];
@@ -99,9 +98,9 @@ const SpellingGridGenerator = () => {
 
     const wordsParam = encodeURIComponent(JSON.stringify(filteredWords));
     const baseUrl = window.location.origin + window.location.pathname;
-    const shareUrl = `${baseUrl}?words=${wordsParam}`;
+    const url = `${baseUrl}?words=${wordsParam}`;
     
-    setShareUrl(shareUrl);
+    setShareUrl(url);
     setShowShareModal(true);
   };
 
@@ -109,25 +108,23 @@ const SpellingGridGenerator = () => {
   const copyShareUrl = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      showStatus('✅ Share link copied to clipboard!');
+      showStatus('Share link copied to clipboard!');
       setShowShareModal(false);
     } catch (error) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = shareUrl;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      showStatus('✅ Share link copied to clipboard!');
+      showStatus('Share link copied to clipboard!');
       setShowShareModal(false);
     }
   };
 
-  // Microphone recording with better error handling
+  // Microphone recording
   const startRecording = async () => {
     try {
-      // Request microphone permission more explicitly
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
@@ -157,9 +154,9 @@ const SpellingGridGenerator = () => {
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start(1000); // Record in 1-second chunks
+      mediaRecorder.start(1000);
       setIsRecording(true);
-      showStatus('🎤 Recording... Speak your spelling words clearly');
+      showStatus('Recording... Speak your spelling words clearly');
     } catch (error) {
       console.error('Microphone error:', error);
       if (error.name === 'NotAllowedError') {
@@ -177,11 +174,11 @@ const SpellingGridGenerator = () => {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setIsProcessing(true);
-      showStatus('🔄 Processing your audio...');
+      showStatus('Processing your audio...');
     }
   };
 
-  const transcribeAudio = async (audioBlob: Blob) => {
+  const transcribeAudio = async (audioBlob) => {
     try {
       const formData = new FormData();
       formData.append('file', audioBlob, 'audio.webm');
@@ -214,15 +211,12 @@ const SpellingGridGenerator = () => {
     }
   };
 
-  // Photo upload with better camera handling
+  // Photo upload
   const handlePhotoClick = () => {
-    // Try to access camera first
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ video: true })
         .then(stream => {
-          // Stop the stream immediately - we just wanted to check permission
           stream.getTracks().forEach(track => track.stop());
-          // Now open file picker
           fileInputRef.current?.click();
         })
         .catch(error => {
@@ -234,23 +228,21 @@ const SpellingGridGenerator = () => {
           }
         });
     } else {
-      // Fallback to file picker without camera check
       fileInputRef.current?.click();
     }
   };
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check if it's actually an image
     if (!file.type.startsWith('image/')) {
       showStatus('Please select an image file.', true);
       return;
     }
 
     setIsProcessing(true);
-    showStatus('📸 Processing your image...');
+    showStatus('Processing your image...');
 
     try {
       const base64 = await convertToBase64(file);
@@ -263,16 +255,16 @@ const SpellingGridGenerator = () => {
     }
   };
 
-  const convertToBase64 = (file: File): Promise<string> => {
+  const convertToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => resolve((reader.result as string).split(',')[1]);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
       reader.onerror = error => reject(error);
     });
   };
 
-  const processImageWithAI = async (base64Image: string) => {
+  const processImageWithAI = async (base64Image) => {
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -320,7 +312,7 @@ const SpellingGridGenerator = () => {
     }
   };
 
-  const processWordsWithAI = async (text: string, source: string) => {
+  const processWordsWithAI = async (text, source) => {
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -350,15 +342,15 @@ const SpellingGridGenerator = () => {
         const extractedText = data.choices[0].message.content;
         const wordList = extractedText
           .split('\n')
-          .map(word => word.trim().replace(/^\d+\.?\s*/, '').replace(/[^\w]/g, '')) // Remove numbers and punctuation
-          .filter(word => word.length > 0 && word.length < 20) // Reasonable word length
+          .map(word => word.trim().replace(/^\d+\.?\s*/, '').replace(/[^\w]/g, ''))
+          .filter(word => word.length > 0 && word.length < 20)
           .slice(0, 12);
 
         if (wordList.length > 0) {
           setTextInput(wordList.join('\n'));
           setWords(wordList);
           setShowTextInput(false);
-          showStatus(`✅ Found ${wordList.length} words from ${source}!`);
+          showStatus(`Found ${wordList.length} words from ${source}!`);
         } else {
           showStatus(`No suitable spelling words found from ${source}. Please try again.`, true);
         }
@@ -369,7 +361,7 @@ const SpellingGridGenerator = () => {
     }
   };
 
-  // PDF generation without popups - using download instead
+  // PDF generation
   const generatePDF = () => {
     const filteredWords = words.filter(word => word.trim().length > 0);
     
@@ -379,7 +371,6 @@ const SpellingGridGenerator = () => {
     }
 
     try {
-      // Create HTML content
       const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -479,7 +470,6 @@ const SpellingGridGenerator = () => {
         </html>
       `;
 
-      // Create blob and download
       const blob = new Blob([htmlContent], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -490,7 +480,7 @@ const SpellingGridGenerator = () => {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      showStatus('✅ Spelling grid downloaded! Open the file and print it.');
+      showStatus('Spelling grid downloaded! Open the file and print it.');
       
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -503,7 +493,6 @@ const SpellingGridGenerator = () => {
     setTextInput(words.filter(w => w.trim()).join('\n'));
   };
 
-  // Share Modal Component
   const ShareModal = () => {
     if (!showShareModal) return null;
 
@@ -550,7 +539,6 @@ const SpellingGridGenerator = () => {
           </div>
         )}
 
-        {/* AI Input Options */}
         <div className="grid grid-cols-1 gap-4 mb-6">
           <button
             onClick={isRecording ? stopRecording : startRecording}
@@ -563,7 +551,7 @@ const SpellingGridGenerator = () => {
           >
             {isRecording ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
             <span>
-              {isRecording ? '🛑 Stop Recording' : '🎤 Record Spelling Words'}
+              {isRecording ? 'Stop Recording' : 'Record Spelling Words'}
             </span>
           </button>
 
@@ -573,7 +561,7 @@ const SpellingGridGenerator = () => {
             className="flex items-center justify-center gap-3 p-4 rounded-lg border-2 bg-purple-100 border-purple-300 text-purple-700 hover:bg-purple-200 transition-all text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Camera className="h-6 w-6" />
-            <span>📸 Take Photo of Words</span>
+            <span>Take Photo of Words</span>
           </button>
         </div>
 
@@ -614,7 +602,6 @@ const SpellingGridGenerator = () => {
           Create Spelling Grid
         </button>
 
-        {/* Footer */}
         <footer className="mt-12 pt-8 border-t border-gray-200 text-center text-gray-600">
           <p className="mb-2">
             Built by{' '}
@@ -678,7 +665,6 @@ const SpellingGridGenerator = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Word Editor - Mobile Friendly */}
         <div>
           <h2 className="text-xl font-semibold mb-4 text-gray-700">Edit Words</h2>
           <div className="space-y-3 max-h-96 overflow-y-auto bg-gray-50 p-4 rounded-lg">
@@ -738,7 +724,6 @@ const SpellingGridGenerator = () => {
           )}
         </div>
 
-        {/* Preview */}
         <div>
           <h2 className="text-xl font-semibold mb-4 text-gray-700">Preview</h2>
           <div className="border-2 border-gray-300 rounded-lg overflow-hidden bg-white overflow-x-auto">
@@ -776,10 +761,8 @@ const SpellingGridGenerator = () => {
         </div>
       </div>
 
-      {/* Share Modal */}
       <ShareModal />
 
-      {/* Footer */}
       <footer className="mt-12 pt-8 border-t border-gray-200 text-center text-gray-600">
         <p className="mb-2">
           Built by{' '}
@@ -791,13 +774,3 @@ const SpellingGridGenerator = () => {
           >
             Dan Course
           </a>
-        </p>
-        <p className="text-sm">
-          Send a grid • Share your spelling lists • Make learning fun
-        </p>
-      </footer>
-    </div>
-  );
-};
-
-export default SpellingGridGenerator;
